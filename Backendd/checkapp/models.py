@@ -1,33 +1,29 @@
-
-
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.contrib.postgres.fields import ArrayField
-from django.contrib.auth.hashers import make_password
 from django.utils import timezone
+from django.contrib.postgres.fields import ArrayField
 
 class User(AbstractUser):
+    email = models.EmailField()
     branch = models.CharField(max_length=100)
     enrollment_no = models.CharField(max_length=20)
-    rolenames = ArrayField(
-        models.CharField(max_length=50),
-        size=3,
-        default=list
-    )
+    roles = ArrayField(models.CharField(max_length=50), blank=True, default=list)
 
     def __str__(self):
         return self.username
+
+    def display_rolenames(self):
+        return ", ".join(self.roles)
+
+    display_rolenames.short_description = 'Roles'
+
 
 class Group(models.Model):
     group_name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
     created_by = models.ForeignKey('User', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    members = ArrayField(
-        models.CharField(max_length=50),
-        blank=True,
-        default=list
-    )
+    members = models.ManyToManyField('User', related_name='member_groups')
 
     def __str__(self):
         return self.group_name
@@ -37,17 +33,9 @@ class Assignment(models.Model):
     description = models.TextField()
     attachment = models.FileField(upload_to='assignments/', blank=True, null=True)
     creator = models.ForeignKey('User', on_delete=models.CASCADE)
-    reviewees = ArrayField(
-        models.IntegerField(),
-        blank=True,
-        default=list
-    )
+    reviewees = models.ManyToManyField('User', related_name='assigned_reviewees')
     group = models.ForeignKey('Group', on_delete=models.SET_NULL, blank=True, null=True)
-    reviewers = ArrayField(
-        models.IntegerField(),
-        blank=True,
-        default=list
-    )
+    reviewers = models.ManyToManyField('User', related_name='assigned_reviewers')
     deadline = models.DateTimeField()
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -68,8 +56,11 @@ class Submission(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     reviewed_at = models.DateTimeField(blank=True, null=True)
 
+    class Meta:
+        unique_together = ('assignment', 'reviewee')
+
     def __str__(self):
-        return f'Submission {self.submission_id} for {self.assignment.title}'
+        return f'Submission {self.submission_id} for {self.assignment.title} by {self.reviewee.username}'
 
 class Comment(models.Model):
     comment_id = models.AutoField(primary_key=True)
@@ -97,5 +88,4 @@ class Subtask(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f'Subtask {self.subtask_id} for Submission {self.submission.submission_id}'
-
+        return f'Subtask {self.subtask_id} for Submission {self.submission.submission_id} by {self.reviewee.username}'

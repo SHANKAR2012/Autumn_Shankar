@@ -1,46 +1,62 @@
 from rest_framework import serializers
-from .models import User, Group, Assignment, Submission, Comment, Subtask
+from django.contrib.auth import get_user_model
+from .models import Group, Assignment, Submission, Comment, Subtask
 
+User = get_user_model()
+
+# User serializer for registration and user details
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'branch', 'enrollment_no', 'rolenames']  # Add other fields as needed
+        fields = ['id', 'username', 'password', 'branch', 'enrollment_no', 'roles','email']
+        extra_kwargs = {
+            'password': {'write_only': True}  # Ensure password is write-only
+        }
 
+    def create(self, validated_data):
+        user = User(**validated_data)
+        user.set_password(validated_data['password'])  
+        user.save()
+        return user
+
+# Login serializer
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True, write_only=True)
+    role = serializers.CharField(required=True)
+
+# Group serializer
 class GroupSerializer(serializers.ModelSerializer):
-    created_by = UserSerializer(read_only=True)
-
     class Meta:
         model = Group
-        fields = ['id', 'group_name', 'description', 'created_by', 'created_at', 'members']
+        fields = '__all__'
 
+# Assignment serializer
 class AssignmentSerializer(serializers.ModelSerializer):
-    creator = UserSerializer(read_only=True)
-    group = GroupSerializer(read_only=True)
-
     class Meta:
         model = Assignment
-        fields = ['id', 'title', 'description', 'attachment', 'creator', 'reviewees', 'group', 'reviewers', 'deadline', 'created_at']
+        fields = '__all__'
+        read_only_fields = ['creator', 'created_at']
+
+# Submission serializer
+from rest_framework import serializers
+from .models import Submission
 
 class SubmissionSerializer(serializers.ModelSerializer):
-    reviewee = UserSerializer(read_only=True)
-    assignment = AssignmentSerializer(read_only=True)
-
     class Meta:
         model = Submission
         fields = ['submission_id', 'assignment', 'reviewee', 'attachment', 'status', 'created_at', 'reviewed_at']
+        read_only_fields = ['submission_id', 'reviewee', 'created_at', 'reviewed_at']  # Set read-only fields
 
+
+# Comment serializer
 class CommentSerializer(serializers.ModelSerializer):
-    reviewer = UserSerializer(read_only=True)
-    submission = SubmissionSerializer(read_only=True)
-
     class Meta:
         model = Comment
-        fields = ['comment_id', 'submission', 'reviewer', 'comment_text', 'created_at']
+        fields = '__all__'
 
+# Subtask serializer
 class SubtaskSerializer(serializers.ModelSerializer):
-    reviewee = UserSerializer(read_only=True)
-    submission = SubmissionSerializer(read_only=True)
-
     class Meta:
         model = Subtask
-        fields = ['subtask_id', 'submission', 'reviewee', 'title', 'description', 'deadline', 'status', 'created_at']
+        fields = '__all__'
