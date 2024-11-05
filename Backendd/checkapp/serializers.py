@@ -43,10 +43,25 @@ from rest_framework import serializers
 from .models import Submission
 
 class SubmissionSerializer(serializers.ModelSerializer):
+    assignment_title = serializers.CharField(source='assignment.title', read_only=True)
+    reviewee_username = serializers.CharField(source='reviewee.username', read_only=True)
+
     class Meta:
         model = Submission
-        fields = ['submission_id', 'assignment', 'reviewee', 'attachment', 'status', 'created_at', 'reviewed_at']
-        read_only_fields = ['submission_id', 'reviewee', 'created_at', 'reviewed_at']  # Set read-only fields
+        fields = [
+            'submission_id',
+            'assignment',
+            'assignment_title',
+            'attachment',
+            'created_at',
+            'reviewed_at',
+            'status',
+            'reviewee_comment',
+            'reviewee_username',    
+        ]
+        read_only_fields = ['reviewee']  # Mark reviewee as read-only since it's set in perform_create
+
+
 
 
 # Comment serializer

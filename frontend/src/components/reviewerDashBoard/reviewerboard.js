@@ -76,6 +76,7 @@
 
       fetchData();
     }, []);
+
     const toggleDetails = (id) => {
       setExpandedIds(prev => {
         const newSet = new Set(prev);
@@ -498,5 +499,7 @@ console.log(date);
   };
 
   const formatAssignmentData = (assignment) => ({ id: assignment.id, title: assignment.title, description: assignment.description, deadline: assignment.deadline || 'Not set', status: assignment.status || 'Active', }); 
-  const formatSubmissionData = (submission) => ({ id: submission.id, assignmentId: submission.assignment, assignmentTitle: submission.assignment_title || 'Unknown Assignment', username: submission.username || 'Anonymous', submittedAt: new Date(submission.created_at).toLocaleDateString(), status: submission.is_reviewed ? 'reviewed' : 'pending', attachment: submission.attachment || '', comment: submission.comment || '', grade: submission.grade || null });
+  const formatSubmissionData = (submission) => ({ id: submission.id, assignmentId: submission.assignment, assignmentTitle: submission.assignment_title || 'Unknown Assignment', username: submission.reviewee_username || 'Anonymous', submittedAt: new Date(submission.created_at).toLocaleDateString(), status: submission.is_reviewed ? 'reviewed' : 'pending', attachment: submission.attachment || '', comment: submission.comment || '', grade: submission.grade || null });
   export default ReviewerDashboard;
+
+     

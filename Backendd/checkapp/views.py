@@ -13,6 +13,7 @@ from .models import Group, Assignment, Submission, Comment, Subtask
 from django.views.decorators.csrf import csrf_exempt
 import json
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 
 from .serializers import (
     UserSerializer,
@@ -128,17 +129,32 @@ class AssignmentDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 # Submission views
 class SubmissionListCreateView(generics.ListCreateAPIView):
-    queryset = Submission.objects.all()
-    serializer_class = SubmissionSerializer
-    permission_classes = [IsAuthenticated]
-    def perform_create(self, serializer):
-        # Automatically set the reviewee to the current authenticated user
-        serializer.save(reviewee=self.request.user)
+        serializer_class = SubmissionSerializer
+        permission_classes = [IsAuthenticated]
+
+        def perform_create(self, serializer):
+            serializer.save(reviewee=self.request.user)
+
+        def get_queryset(self):
+            user = self.request.user
+
+            # Check if the user is a reviewer on any assignments.
+            reviewer_assignments = Assignment.objects.filter(reviewers=user)
+
+            if reviewer_assignments.exists():
+                # If the user is a reviewer, show submissions related to assignments they are reviewing.
+                return Submission.objects.filter(
+                    assignment__in=reviewer_assignments
+                ).select_related('assignment')
+            else:
+                # If the user is a reviewee, show only their own submissions.
+                return Submission.objects.filter(reviewee=user).select_related('assignment')
 
 class SubmissionDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Submission.objects.all()
     serializer_class = SubmissionSerializer
     permission_classes = [IsAuthenticated]
+
 
 # Comment views
 class CommentListCreateView(generics.ListCreateAPIView):
@@ -219,3 +235,19 @@ class RequestReviewView(APIView):
         return Response({
             'error': 'Cannot request review for this submission'
         }, status=status.HTTP_400_BAD_REQUEST)
+class ReviewerSubmissionsView(generics.ListAPIView):
+    serializer_class = SubmissionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Get the current authenticated user
+        user = self.request.user
+        
+        # Check if the user has the 'reviewer' role
+        if 'reviewer' not in user.roles:
+            raise PermissionDenied("You do not have permission to view these submissions.")
+
+        # Get all submissions for assignments where the current user is a reviewer
+        return Submission.objects.filter(
+            assignment__reviewers=user
+        ).select_related('assignment')

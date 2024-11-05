@@ -55,6 +55,7 @@ class Submission(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='unchecked')
     created_at = models.DateTimeField(default=timezone.now)
     reviewed_at = models.DateTimeField(blank=True, null=True)
+    reviewee_comment = models.TextField(blank=True, null=True)
 
     class Meta:
         unique_together = ('assignment', 'reviewee')

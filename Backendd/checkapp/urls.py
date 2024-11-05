@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     RequestReviewView,
+    ReviewerSubmissionsView,
     UserListCreateView,
     UserDetailView,
     GroupListCreateView,
@@ -45,6 +46,8 @@ urlpatterns = [
     # Authentication URLs
     path('login/', LoginView.as_view(), name='login'),
     path('current-user/', CurrentUserView.as_view(), name='current-user'),
+
+    # Specific Routes
     path('assignments/my-assignments/', 
          AssignmentListCreateView.as_view(http_method_names=['get']), 
          name='my-assignments'),
@@ -54,4 +57,7 @@ urlpatterns = [
     path('submissions/<int:pk>/request-review/', 
          RequestReviewView.as_view(), 
          name='request-review'),
+    path('submissions/reviewer/', 
+         ReviewerSubmissionsView.as_view(), 
+         name='reviewer-submissions'),  # This should list all submissions for reviewers
 ]
