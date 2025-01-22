@@ -28,6 +28,27 @@ SECRET_KEY = "django-insecure-a-%1scm%)-2qmo6&xo^&0e-06@0p+13ntb%uq*lg^vn7!z1agm
 DEBUG = True
 
 ALLOWED_HOSTS = []
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Change the duration as needed
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Change the duration as needed
+    # Other settings can go here
+}
+SESSION_COOKIE_AGE = 3600  # Time in seconds
+
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# Add Channeli OAuth settings
+CHANNELI_CLIENT_ID = '0Gz474nCddLektyVZzqU1Zk9CxTRYOOcS0Css0d0'
+CHANNELI_CLIENT_SECRET='miR8oyJEuL8Rl0qThH3LCGDLgnogdGDk8MhzsVK79WBgoQXcQsPDIb8hMAW4orUI5Z8VYNfYlVNc6vlQIYXZH5GGT4aE8g5XzvuYMJ2lQYZvDzg3ZmtputBKxoV9FSbF'
+CHANNELI_REDIRECT_URI = 'https://localhost:8000/oauth/callback'
+CHANNELI_AUTH_URL = 'https://channeli.in/oauth/authorize'
+CHANNELI_TOKEN_URL = 'https://channeli.in/oauth/token'
+CHANNELI_PROFILE_URL = 'https://channeli.in/open_auth/get_user_data/'
+
+# Allow the redirect URI in allowed hosts
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -45,10 +66,22 @@ INSTALLED_APPS = [
      'rest_framework.authtoken',
      # ... other installed apps
     'rest_framework_simplejwt',
+    'channels'
     ]
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],  # Ensure Redis is running
+        },
+    },
+}
+
+# ASGI_APPLICATION = 'backend.asgi.application'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # 
 ]
+ASGI_APPLICATION='backend.asgi.application'
 CORS_ALLOW_ALL_ORIGINS = True
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

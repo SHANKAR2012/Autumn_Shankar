@@ -17,12 +17,17 @@ Including another URLconf
 
 from django.contrib import admin 
 from django.urls import include, path
-from checkapp import views
+
 from django.conf import settings
 from django.conf.urls.static import static
+
+from . import views
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('api/',include('checkapp.urls'), )
+    path('api/',include('checkapp.urls')),
+    path('oauth/login/', views.channeli_login, name='channeli_login'),
+
+    path('oauth/callback/', views.channeli_callback, name='channeli_callback'),
 ]
 if settings.DEBUG:  # Only serve media files through Django in development
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

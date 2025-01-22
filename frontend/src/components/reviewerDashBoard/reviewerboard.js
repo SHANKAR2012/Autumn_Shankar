@@ -3,8 +3,8 @@
   import { Loader2 } from 'lucide-react';
   import { ChevronDown, ChevronUp, Paperclip } from 'lucide-react';
 
-
-
+  import Linkify from 'react-linkify';
+  import CreateGroupAssignmentButton from './createAssignmentGroup';
   import Swal from 'sweetalert2';
   const token = localStorage.getItem('access_token');
   console.log(token);
@@ -12,9 +12,23 @@
   
 
   const ReviewerDashboard = () => {
+    const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [selectedGroupReviewees, setSelectedGroupReviewees] = useState([]);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+
+  const toggleGroupModal = () => setIsGroupModalOpen(!isGroupModalOpen);
+    
+
+const [comment, setComment] = useState("");
+
     const [assignments, setAssignments] = useState([]);
     const [submissions, setSubmissions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentSubmissionId, setCurrentSubmissionId] = useState(null);
+    
+  const [showModal, setShowModal] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [reviewees, setReviewees] = useState([]);
     const [reviewers, setReviewers] = useState([]); // Initialize reviewers array
@@ -76,6 +90,7 @@
 
       fetchData();
     }, []);
+    
 
     const toggleDetails = (id) => {
       setExpandedIds(prev => {
@@ -90,6 +105,7 @@
         return newSet;
       });
     };
+    
 
     const handleCreateAssignment = async (e) => {
       e.preventDefault();
@@ -129,6 +145,7 @@ if (newAssignment.attachment) {
               confirmButtonText: 'Cool'
             });
         }
+        
 
         const formattedNewAssignment = formatAssignmentData(response.data);
         setAssignments([...assignments, formattedNewAssignment]);
@@ -151,11 +168,7 @@ const date = new Date(isoDate);
 
 console.log(date); 
 
-    // const handleRevieweeChange = (e) => {
-    //   const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    //   setNewAssignment({ ...newAssignment, reviewees: selectedOptions });
-    //   console.log('Selected reviewees:', selectedOptions); // Debugging line
-    // };
+    
     const handleRevieweeChange = (e) => {
       const { value, checked } = e.target; // Get the value and checked status of the checkbox
       setNewAssignment((prevState) => {
@@ -179,7 +192,13 @@ console.log(date);
     }));
 };
   console.log('Selected reviewers:', newAssignment.reviewers);
-
+  const handleSelectAll = () => {
+    setSelectedGroupReviewees(
+      selectedGroupReviewees.length === reviewees.length
+        ? []
+        : reviewees.map((r) => r.id)
+    );
+  };
 
     const handleSelectAllReviewees = (e) => {
       if (e.target.checked) {
@@ -193,9 +212,88 @@ console.log(date);
     const handleFileChange = (e) => {
       setNewAssignment({ ...newAssignment, attachment: e.target.files[0] });
     };
+    const handleReviewClick = (submissionId) => {
+      setCurrentSubmissionId(submissionId);
+      setShowModal(true);
+    };
+  
+    const handleSubmitComment = () => {
+      if (!currentSubmissionId) return;
+    
+      axiosInstance
+        .post(`/submit-comment/${currentSubmissionId}/`, {
+          comment_text: comment.trim(),
+          status: "checked",
+           // Update the status to 'checked'
+        })
+        .then((response) => {
+          console.log("Comment and status updated successfully:", response.data);
+    
+          // Close modal and reset state
+          setShowModal(false);
+          setComment("");
+    
+          // Optionally, update submission status locally
+          setSubmissions((prevSubmissions) =>
+            prevSubmissions.map((submission) =>
+              submission.submission_id === currentSubmissionId
+                ? { ...submission, status: "checked", comment: comment.trim() }
+                : submission
+            )
+          );
+        })
+        .catch((error) => {
+          console.error("Error updating comment and status:", error);
+        });
+    };
+    
 
     const toggleProfile = () => {
       setShowProfile(!showProfile);
+    };
+    const linkDecorator = (href, text, key) => (
+      <a
+        href={href}
+        key={key}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-500 underline hover:text-blue-700"
+      >
+        {text}
+      </a>
+    );
+    const handleGroupCheckboxChange = (id) => {
+      setSelectedGroupReviewees((prev) =>
+        prev.includes(id)
+          ? prev.filter((revieweeId) => revieweeId !== id)
+          : [...prev, id]
+      );
+    };
+    const handleGroupSubmit = async () => {
+      const groupData = {
+        group_name: newGroupName,
+        description: newGroupDescription,
+        members: selectedGroupReviewees,
+      };
+  
+      try {
+        const response = await axiosInstance.post(
+          `/groups/create`,
+          groupData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        alert('Group created successfully!');
+        console.log(response.data);
+        toggleGroupModal();
+      } catch (error) {
+        console.error('Failed to create group', error);
+        alert('Error creating group. Please try again.');
+      }
     };
 
     if (loading) {
@@ -206,26 +304,119 @@ console.log(date);
       );
     }
 
+
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Reviewer Dashboard</h1>
-            <div className="flex items-center space-x-4">
-              <button 
-                onClick={toggleProfile}
-                className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
+  <h1 className="text-3xl font-bold text-gray-900">Reviewer Dashboard</h1>
+  <div className="flex items-center space-x-4">
+    <button 
+      onClick={toggleProfile}
+      className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
+    >
+      Profile
+    </button>
+    <button 
+       // Assuming you will handle the notifications toggle here
+      className="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600"
+    >
+      Notifications
+    </button>
+    <span className="bg-blue-100 text-blue-800 py-1 px-2 rounded">
+      {assignments.length} Assignments
+    </span>
+    <span className="bg-green-100 text-green-800 py-1 px-2 rounded">
+      {submissions.length} Submissions
+    </span>
+    <span
+        onClick={toggleGroupModal}
+        className="bg-blue-100 text-blue-800 py-1 px-2 rounded cursor-pointer"
+      >
+        Create Group
+      </span>
+
+      {/* Group Modal */}
+      {isGroupModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-1/2">
+            <h2 className="text-2xl font-bold mb-4">Create New Group</h2>
+
+            {/* Group Name Input */}
+            <div className="mb-4">
+              <label className="block font-bold mb-1">Group Name</label>
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                className="border rounded w-full p-2"
+                placeholder="Enter group name"
+              />
+            </div>
+
+            {/* Group Description Input */}
+            <div className="mb-4">
+              <label className="block font-bold mb-1">Description</label>
+              <textarea
+                value={newGroupDescription}
+                onChange={(e) => setNewGroupDescription(e.target.value)}
+                className="border rounded w-full p-2"
+                placeholder="Enter description"
+              ></textarea>
+            </div>
+
+            {/* Select Reviewees */}
+            <div className="mb-4">
+              <label className="block font-bold mb-2">Select Reviewees</label>
+              {reviewees.map((reviewee) => (
+                <div key={reviewee.id} className="flex items-center mb-2">
+                  <input
+                    type="checkbox"
+                    value={reviewee.id}
+                    onChange={() => handleGroupCheckboxChange(reviewee.id)}
+                    checked={selectedGroupReviewees.includes(reviewee.id)}
+                    className="mr-2"
+                  />
+                  <span>{reviewee.username} (ID: {reviewee.id})</span>
+                </div>
+              ))}
+              <label className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  onChange={handleSelectAll}
+                  className="mr-2"
+                />
+                Select All Reviewees
+              </label>
+            </div>
+
+            {/* Modal Buttons */}
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={toggleGroupModal}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
               >
-                Profile
+                Cancel
               </button>
-              <span className="bg-blue-100 text-blue-800 py-1 px-2 rounded">
-                {assignments.length} Assignments
-              </span>
-              <span className="bg-green-100 text-green-800 py-1 px-2 rounded">
-                {submissions.length} Submissions
-              </span>
+              <button
+                onClick={handleGroupSubmit}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Create Group
+              </button>
+              
             </div>
           </div>
+        </div>
+      )}
+      <CreateGroupAssignmentButton/>      
+
+  
+    
+    
+  </div>
+</div>
+
 
           {showProfile && userProfile && (
             <div className="bg-white p-4 rounded shadow-md mt-4">
@@ -237,25 +428,8 @@ console.log(date);
             </div>
           )}
 
-          {/* <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold">Assignments</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {assignments.map((assignment) => (
-                  <div key={assignment.id} className="border rounded-lg p-4 shadow hover:shadow-lg transition-shadow">
-                    <h3 className="flex justify-between items-center">
-                      <span>{assignment.title}</span>
-                      <span className="bg-blue-100 text-blue-800 py-1 px-2 rounded">{assignment.status}</span>
-                    </h3>
-                    <p className="text-gray-600">{assignment.description}</p>
-                    <div className="flex justify-between items-center">
-                      <span>Deadline: {assignment.deadline}</span>
-                      <button className="border rounded px-2 py-1">View Details</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div> */}
+          
+            
              <div className="space-y-6 p-6">
       <h2 className="text-2xl font-semibold">Assignments</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -313,7 +487,10 @@ console.log(date);
                         className="flex items-center gap-2 text-blue-600 hover:text-blue-800 cursor-pointer"
                       >
                         <Paperclip className="w-4 h-4" />
-                        <span>{assignment.attachment}</span>
+                        <span><a href={assignment.attachment.url} target="_blank" rel="noopener noreferrer">
+  {assignment.attachment.name}
+</a>
+</span>
                       </div>
                     ))}
                   </div>
@@ -321,55 +498,110 @@ console.log(date);
 
                 {/* Submissions Section */}
                 {selectedAssignmentId === assignment.id && (
-                  <div className="mt-6">
-                    <h2 className="text-xl font-semibold">Submissions</h2>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b bg-gray-50">
-                            <th className="text-left py-4 px-6">Assignment ID</th>
-                            <th className="text-left py-4 px-6">Assignment</th>
-                            <th className="text-left py-4 px-6">Username</th>
-                            <th className="text-left py-4 px-6">Status</th>
-                            <th className="text-left py-4 px-6">Submitted On</th>
-                            <th className="text-left py-4 px-6">Attachment</th>
-                            <th className="text-left py-4 px-6">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {submissions
-                            .filter(submission => submission.assignmentId === assignment.id)
-                            .map(submission => (
-                              <tr key={submission.id} className="border-b hover:bg-gray-50">
-                                <td className="py-4 px-6">{submission.assignmentId}</td>
-                                <td className="py-4 px-6">{submission.assignmentTitle}</td>
-                                <td className="py-4 px-6">{submission.username}</td>
-                                <td className="py-4 px-6">
-                                  <span 
-                                    className={submission.status === 'reviewed' 
-                                      ? 'bg-green-100 text-green-800 py-1 px-2 rounded'
-                                      : 'bg-yellow-100 text-yellow-800 py-1 px-2 rounded'
-                                    }
-                                  >
-                                    {submission.status.charAt(0).toUpperCase() + submission.status.slice(1)}
-                                  </span>
-                                </td>
-                                <td className="py-4 px-6">{submission.submittedAt}</td>
-                                <td className="py-4 px-6">
-                                  {submission.attachment ? (
-                                    <a href={submission.attachment} target="_blank" rel="noopener noreferrer" className="text-blue-600">View</a>
-                                  ) : 'N/A'}
-                                </td>
-                                <td className="py-4 px-6">
-                                  <button className="bg-blue-500 text-white py-1 px-2 rounded">Review</button>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+  <div className="mt-6">
+    <h2 className="text-xl font-semibold">Submissions</h2>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="border-b bg-gray-50">
+            <th className="text-left py-4 px-6">Assignment ID</th>
+            <th className="text-left py-4 px-6">Assignment</th>
+            <th className="text-left py-4 px-6">Username</th>
+            <th className="text-left py-4 px-6">Status</th>
+            <th className="text-left py-4 px-6">Submitted On</th>
+            <th className="text-left py-4 px-6">Attachment</th>
+            <th className="text-left py-4 px-6">Reviewee Comment</th>
+            <th className="text-left py-4 px-6">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {submissions
+            .filter((submission) => submission.assignmentId === assignment.id)
+            .map((submission) => (
+              <tr
+                key={submission.submission_id}
+                className="border-b hover:bg-gray-50"
+              >
+                <td className="py-4 px-6">{submission.assignmentId}</td>
+                <td className="py-4 px-6">{submission.assignmentTitle}</td>
+                <td className="py-4 px-6">{submission.username}</td>
+                <td className="py-4 px-6">
+                  <span
+                    className={
+                      submission.status === "reviewed"
+                        ? "bg-green-100 text-green-800 py-1 px-2 rounded"
+                        : "bg-yellow-100 text-yellow-800 py-1 px-2 rounded"
+                    }
+                  >
+                    {submission.status.charAt(0).toUpperCase() +
+                      submission.status.slice(1)}
+                  </span>
+                </td>
+                <td className="py-4 px-6">{submission.submittedAt}</td>
+                <td className="py-4 px-6">
+                  {submission.attachment ? (
+                    <a
+                      href={submission.attachment}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600"
+                    >
+                      View
+                    </a>
+                  ) : (
+                    "N/A"
+                  )}
+                </td>
+                <td className="py-4 px-6">
+                  <Linkify componentDecorator={linkDecorator}>
+                    {submission.comment || "No comments"}
+                  </Linkify>
+                </td>
+                <td className="py-4 px-6">
+                  <button
+                    className="bg-blue-500 text-white py-1 px-2 rounded"
+                    onClick={() => handleReviewClick(submission.submission_id)}
+                  >
+                    Review
+                  </button>
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+
+    {/* Modal for Adding Comment */}
+    {showModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+        <div className="bg-white p-6 rounded-lg w-96">
+          <h3 className="text-lg font-semibold mb-4">Add Review Comment</h3>
+          <textarea
+            className="w-full border p-2 mb-4"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Enter your comment"
+          />
+          <div className="flex justify-between">
+            <button
+              className="bg-green-500 text-white py-1 px-2 rounded"
+              onClick={handleSubmitComment}
+            >
+              Submit Comment & Mark as Checked
+            </button>
+            <button
+              className="bg-gray-500 text-white py-1 px-2 rounded"
+              onClick={() => setShowModal(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
               </div>
             )}
           </div>
@@ -411,19 +643,7 @@ console.log(date);
                     />
                   </div>
                   <div>
-                  {/* <label className="block text-gray-700">Select Reviewees</label> */}
-  {/* <select 
-    multiple 
-    value={newAssignment.reviewees} 
-    onChange={handleRevieweeChange} 
-    className="border border-gray-300 rounded w-full p-2"
-  >
-    {reviewees.map(reviewee => (
-      <option key={reviewee.id} value={reviewee.id}>
-        {reviewee.username} (ID: {reviewee.id})
-      </option>
-    ))}
-  </select> */}
+                  
   <div>
     <label className="block mb-2 font-bold">Select Reviewees:</label>
     {reviewees.map(reviewee => (
@@ -439,21 +659,7 @@ console.log(date);
         </div>
     ))}
 </div>
-{/* <div>
-    <label className="block mb-2 font-bold">Select Reviewees:</label>
-    {reviewees.map(reviewee => (
-        <div key={reviewee.id} className="flex items-center mb-2">
-            <input
-                type="checkbox"
-                value={reviewee.id}
-                onChange={handleRevieweeChange}
-                className="mr-2"
-                checked={newAssignment.reviewees.includes(reviewee.id)} // Check if this reviewee is already selected
-            />
-            <span>{reviewee.username} (ID: {reviewee.id})</span>
-        </div>
-    ))}
-</div> */}
+
 
 <div>
     <label className="block mb-2 font-bold">Select Reviewers:</label>
@@ -499,7 +705,24 @@ console.log(date);
   };
 
   const formatAssignmentData = (assignment) => ({ id: assignment.id, title: assignment.title, description: assignment.description, deadline: assignment.deadline || 'Not set', status: assignment.status || 'Active', }); 
-  const formatSubmissionData = (submission) => ({ id: submission.id, assignmentId: submission.assignment, assignmentTitle: submission.assignment_title || 'Unknown Assignment', username: submission.reviewee_username || 'Anonymous', submittedAt: new Date(submission.created_at).toLocaleDateString(), status: submission.is_reviewed ? 'reviewed' : 'pending', attachment: submission.attachment || '', comment: submission.comment || '', grade: submission.grade || null });
+  const formatSubmissionData = (submission) => {
+    console.log(submission);  // Log the submission object
+  
+    return {
+      submission_id: submission.submission_id,
+      assignmentId: submission.assignment,
+      assignmentTitle: submission.assignment_title || 'Unknown Assignment',
+      submittedAt: new Date(submission.created_at).toLocaleString(),
+      status: submission.status,
+      attachment: submission.attachment,
+      username: submission.reviewee_username,
+      comment: submission.reviewee_comment,
+      
+    };
+  };
+  
+
+  
   export default ReviewerDashboard;
 
      

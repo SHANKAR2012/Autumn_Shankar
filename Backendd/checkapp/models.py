@@ -24,9 +24,11 @@ class Group(models.Model):
     created_by = models.ForeignKey('User', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     members = models.ManyToManyField('User', related_name='member_groups')
+    assignments = models.ManyToManyField('Assignment', related_name='assigned_groups', blank=True)
 
     def __str__(self):
         return self.group_name
+
 
 class Assignment(models.Model):
     title = models.CharField(max_length=200)
@@ -34,7 +36,7 @@ class Assignment(models.Model):
     attachment = models.FileField(upload_to='assignments/', blank=True, null=True)
     creator = models.ForeignKey('User', on_delete=models.CASCADE)
     reviewees = models.ManyToManyField('User', related_name='assigned_reviewees')
-    group = models.ForeignKey('Group', on_delete=models.SET_NULL, blank=True, null=True)
+    group = models.ManyToManyField('Group', related_name='assigned_assignments')  # Changed to Many-to-Many
     reviewers = models.ManyToManyField('User', related_name='assigned_reviewers')
     deadline = models.DateTimeField()
     created_at = models.DateTimeField(default=timezone.now)
@@ -47,18 +49,19 @@ class Submission(models.Model):
         ('unchecked', 'Unchecked'),
         ('checked', 'Checked'),
     ]
-
+ 
     submission_id = models.AutoField(primary_key=True)
     assignment = models.ForeignKey('Assignment', on_delete=models.CASCADE)
     reviewee = models.ForeignKey('User', on_delete=models.CASCADE)
     attachment = models.FileField(upload_to='submissions/', blank=True, null=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='unchecked')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='unchecked')
     created_at = models.DateTimeField(default=timezone.now)
     reviewed_at = models.DateTimeField(blank=True, null=True)
     reviewee_comment = models.TextField(blank=True, null=True)
 
     class Meta:
-        unique_together = ('assignment', 'reviewee')
+        # unique_together = ('assignment', 'reviewee')
+        pass;
 
     def __str__(self):
         return f'Submission {self.submission_id} for {self.assignment.title} by {self.reviewee.username}'
@@ -85,8 +88,17 @@ class Subtask(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
     deadline = models.DateTimeField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return f'Subtask {self.subtask_id} for Submission {self.submission.submission_id} by {self.reviewee.username}'
+class Notification(models.Model):
+    notification_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey('User', on_delete=models.CASCADE)  # User receiving the notification
+    message = models.TextField()  # The content of the notification
+    read = models.BooleanField(default=False)  # Whether the notification has been read
+    created_at = models.DateTimeField(default=timezone.now)  # When the notification was created
+
+    def __str__(self):
+        return f"Notification {self.notification_id} for {self.user.username}"

@@ -149,6 +149,9 @@ const Login = () => {
       setMessage('');
     }
   };
+  const handleChanneliLogin = () => {
+    window.location.href = 'http://localhost:8000/oauth/login/';
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-500 via-indigo-500 to-teal-500">
@@ -198,6 +201,13 @@ const Login = () => {
             Login
           </button>
         </form>
+        <hr className="my-4" />
+        <button
+          onClick={handleChanneliLogin}
+          className="w-full p-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+        >
+          Login with Channeli
+        </button>
       </div>
     </div>
   );

@@ -1,11 +1,18 @@
 from django.urls import path
+from . import views
 from .views import (
+    CreateNotificationView,
+    GetNotificationsView,
+    GroupAssignmentCreateView,
+    GroupCreateView,
+    GroupListView,
+    MarkNotificationAsReadView,
     RequestReviewView,
     ReviewerSubmissionsView,
     UserListCreateView,
     UserDetailView,
-    GroupListCreateView,
-    GroupDetailView,
+   
+    
     AssignmentListCreateView,
     AssignmentDetailView,
     SubmissionListCreateView,
@@ -16,6 +23,8 @@ from .views import (
     SubtaskDetailView,
     LoginView,
     CurrentUserView,
+    ReviewSubmissionView,
+    SubmitCommentView,
 )
 
 urlpatterns = [
@@ -24,8 +33,12 @@ urlpatterns = [
     path('users/<int:pk>/', UserDetailView.as_view(), name='user-detail'),
 
     # Group URLs
-    path('groups/', GroupListCreateView.as_view(), name='group-list-create'),
-    path('groups/<int:pk>/', GroupDetailView.as_view(), name='group-detail'),
+#     path('groups/', GroupListCreateView.as_view(), name='group-list-create'),
+    # path('groups/<int:pk>/', GroupDetailView.as_view(), name='group-detail'),
+    path('groups/create',GroupCreateView.as_view(), name='group-create'),
+    path('groups/', GroupListView.as_view(), name='group-list'),
+    path('groups/assignments/create/', GroupAssignmentCreateView.as_view(), name='create-group-assignment'),
+     
 
     # Assignment URLs
     path('assignments/', AssignmentListCreateView.as_view(), name='assignment-list-create'),
@@ -59,5 +72,16 @@ urlpatterns = [
          name='request-review'),
     path('submissions/reviewer/', 
          ReviewerSubmissionsView.as_view(), 
-         name='reviewer-submissions'),  # This should list all submissions for reviewers
+         name='reviewer-submissions'),  
+     path('delete_submission/<int:submission_id>/', views.delete_submission, name='delete_submission'),
+     # This should list all submissions for reviewers
+       path('review_submission/<int:submission_id>/', ReviewSubmissionView.as_view(), name='review_submission'),
+        path('submissions/<int:submission_id>/comments/', CommentListCreateView.as_view(), name='comment-list-create'),
+    
+    # For retrieving, updating, or deleting a specific comment
+    path('comments/<int:pk>/', CommentDetailView.as_view(), name='comment-detail'),
+    path('submit-comment/<int:submission_id>/', SubmitCommentView.as_view(), name='submit_comment'),
+     path('create_notification/', CreateNotificationView.as_view(), name='create_notification'),
+    path('get_notifications/', GetNotificationsView.as_view(), name='get_notifications'),
+    path('mark_notification_as_read/<int:notification_id>/', MarkNotificationAsReadView.as_view(), name='mark_notification_as_read'),
 ]
